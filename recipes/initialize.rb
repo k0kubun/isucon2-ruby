@@ -8,7 +8,7 @@ init_commands = <<-EOS
 EOS
 
 init_commands.each_line do |command|
-  execute command do
+  execute command.strip do
     not_if "test -e /tmp/already_initialized"
   end
 end

@@ -13,3 +13,8 @@ Before applying this repository, launch EC2 instance with it.
 $ gem install itamae --pre
 $ itamae ssh deploy.rb -h ec2-***.amazonaws.com -u isu-user -i ~/.ssh/id_rsa.isucon
 ```
+
+Then you'll see ISUCON2 application on port 80.  
+  
+And benchmark application will be available on port 5001.  
+You can login with user: team1, password: xxx.

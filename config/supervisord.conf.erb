@@ -25,11 +25,16 @@ stdout_logfile=/tmp/isucon2.ruby.log
 stderr_logfile=/tmp/isucon2.ruby.log
 autostart=true
 
-[program:isucon_node]
-directory=/home/isucon/app/nodejs
-command=/home/isucon/etc/env.sh node server
+[program:isucon_manager]
+directory=/home/isu-user/isucon2/tools
+command=/home/isu-user/isucon2-ruby/config/env.sh node manager.js
 stopsignal=QUIT
-user=isucon
-stdout_logfile=/tmp/isucon2.node.log
-stderr_logfile=/tmp/isucon2.node.log
-autostart=false
+user=isu-user
+autostart=true
+
+[program:isucon_agent]
+directory=/home/isu-user/isucon2/tools
+command=/home/isu-user/isucon2-ruby/config/env.sh node agent.js
+stopsignal=QUIT
+user=isu-user
+autostart=true
