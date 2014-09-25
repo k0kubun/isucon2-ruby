@@ -18,8 +18,8 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 serverurl=unix:///tmp/supervisor.sock ; use a unix:// URL  for a unix socket
 
 [program:isucon_ruby]
-directory=/home/isu-user
-command=/home/isu-user/env.sh foreman start
+directory=/home/isu-user/isucon2-ruby/app
+command=/home/isu-user/isucon2-ruby/config/env.sh foreman start
 user=isu-user
 stdout_logfile=/tmp/isucon2.ruby.log
 stderr_logfile=/tmp/isucon2.ruby.log
