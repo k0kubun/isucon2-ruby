@@ -9,6 +9,9 @@ execute "cd /home/isu-user/isucon2/tools/http_load_isucon2; /home/isu-user/isuco
 template "/tmp/isumaster.sql" do
   action :create
   source "../db/isumaster.sql"
+  notifies :run, "execute[cat /tmp/isumaster.sql | mysql -uroot]"
 end
 
-execute "cat /tmp/isumaster.sql | mysql -uroot"
+execute "cat /tmp/isumaster.sql | mysql -uroot" do
+  action :nothing
+end

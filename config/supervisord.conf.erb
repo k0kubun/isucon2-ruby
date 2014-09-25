@@ -24,3 +24,12 @@ user=isu-user
 stdout_logfile=/tmp/isucon2.ruby.log
 stderr_logfile=/tmp/isucon2.ruby.log
 autostart=true
+
+[program:isucon_node]
+directory=/home/isucon/app/nodejs
+command=/home/isucon/etc/env.sh node server
+stopsignal=QUIT
+user=isucon
+stdout_logfile=/tmp/isucon2.node.log
+stderr_logfile=/tmp/isucon2.node.log
+autostart=false
