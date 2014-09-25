@@ -1,4 +1,4 @@
 template "/etc/supervisord.conf" do
   action :create
-  source "../config/supervisord.conf.erb"
+  source "../configs/supervisord.conf.erb"
 end
