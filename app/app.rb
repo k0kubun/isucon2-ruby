@@ -139,7 +139,7 @@ class Isucon2App < Sinatra::Base
 
   post '/admin' do
     mysql = connection
-    open(File.dirname(__FILE__) + '/../config/database/initial_data.sql') do |file|
+    open(File.dirname(__FILE__) + '/../db/initial_data.sql') do |file|
       file.each do |line|
         next unless line.strip!.length > 0
         mysql.query(line)
