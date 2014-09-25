@@ -17,5 +17,5 @@ $ itamae ssh deploy.rb -h ec2-***.amazonaws.com -u isu-user -i ~/.ssh/id_rsa.isu
 ## Benchmark
 
 ```bash
-$ itamae ssh bench.rb -h ec2-***.amazonaws.com -u isu-user -i ~/.ssh/id_rsa.isucon
+$ itamae ssh bench.rb -l debug -h ec2-***.amazonaws.com -u isu-user -i ~/.ssh/id_rsa.isucon
 ```
