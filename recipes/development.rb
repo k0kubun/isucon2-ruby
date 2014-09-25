@@ -1,5 +1,5 @@
 template "/home/isu-user/.bashrc" do
   action :create
-  source "../configs/.bashrc.erb"
+  source "../config/.bashrc.erb"
 end
 
