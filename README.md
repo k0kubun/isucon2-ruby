@@ -9,6 +9,7 @@ Before applying this repository, launch EC2 instance with it.
 
 ## Deploy
 
-```
+```bash
+$ gem install itamae --pre
 $ itamae ssh -h ec2-***.amazonaws.com -p 22 -u isu-user -i ~/.ssh/id_rsa.github itamae.rb
 ```
