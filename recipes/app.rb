@@ -4,6 +4,11 @@ git "/home/isu-user/isucon2-ruby" do
   notifies :run, "execute[supervisorctl restart isucon_ruby]"
 end
 
+template "/home/isu-user/isucon2-ruby/app/config/newrelic.yml" do
+  action :create
+  source "../app/config/newrelic.yml"
+end
+
 execute "supervisorctl restart isucon_ruby" do
   action :nothing
 end
