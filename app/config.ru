@@ -1,5 +1,4 @@
 require './app'
-require "dotenv"
 require "newrelic_rpm"
 
 if defined?(Unicorn)
@@ -7,5 +6,4 @@ if defined?(Unicorn)
   use Unicorn::OobGC, 1, %r{\A/}
 end
 
-Dotenv.load
 run Isucon2App
