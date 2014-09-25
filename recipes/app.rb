@@ -1,5 +1,5 @@
 git "/home/isu-user/isucon2-ruby" do
-  repository "git@github.com:k0kubun/isucon2-ruby"
+  repository "https://github.com/k0kubun/isucon2-ruby"
   user "isu-user"
   notifies :run, "execute[supervisorctl restart isucon_ruby]"
 end
