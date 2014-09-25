@@ -1,0 +1,94 @@
+user nginx;
+worker_processes 4;
+error_log  /var/log/nginx/error.log;
+pid        /var/run/nginx.pid;
+
+events {
+  worker_connections 4096;
+  multi_accept on;
+  use epoll;
+}
+
+http {
+  include      /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+  access_log  off;
+  #access_log  /var/log/nginx/access.log  main;
+
+  sendfile   on;
+  tcp_nopush on;
+
+  keepalive_timeout  75;
+
+  upstream sinatra-unicorn {
+    server localhost:3000;
+    #server unix:/tmp/sinatra.sock;
+  }
+
+  upstream varnish {
+    server localhost:6081;
+  }
+
+  server {
+    listen 80;
+    gzip  on;
+    gzip_vary on;
+    gzip_min_length 500;
+    gzip_http_version 1.0;
+    gzip_comp_level   2;
+
+    # server_name localhost;
+    server_tokens off;
+
+    client_max_body_size 4G;
+    root /home/isu-user/isucon2/webapp/ruby/public;
+    error_log /tmp/nginx.isucon2.error.log;
+
+    try_files $uri $uri.html $uri/index.html @unicorn;
+
+    location @unicorn {
+      proxy_set_header X-Real-IP  $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $http_host;
+      proxy_pass http://sinatra-unicorn;
+      proxy_redirect off;
+
+      set $do_not_cache 0;
+
+      # POST or HEAD ?
+      if ($request_method != "GET") {
+        set $do_not_cache 1;
+      }
+
+      # ignore cache uri
+      # if ($uri !~* ".(foo|hoge)$") {
+      #  set $do_not_cache 1;
+      # }
+
+      proxy_no_cache       $do_not_cache;
+      proxy_cache_bypass   $do_not_cache;
+      proxy_ignore_headers Cache-Control;
+      proxy_cache_key      $scheme$proxy_host$uri$is_args$args;
+      proxy_cache_valid    200 1d;
+    }
+
+    location ~ ^/(css|image|js|favicon)/ {
+      gzip_static on;
+      # log_not_found off;
+      expires     max;
+      add_header  Cache-Control public;
+    }
+
+    location ~ (^/(ticket|artist)/|^/$) {
+      proxy_set_header X-Real-IP  $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $http_host;
+      proxy_pass http://varnish;
+      proxy_redirect off;
+    }
+  }
+}
