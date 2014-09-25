@@ -1,11 +1,27 @@
+def production?
+  ENV["RACK_ENV"] == "production"
+end
+
+def development?
+  !production?
+end
+
 require 'sinatra/base'
 require 'slim'
 require 'json'
 require 'mysql2'
 
+if development?
+  require "rack-lineprof"
+end
+
 class Isucon2App < Sinatra::Base
   $stdout.sync = true
   set :slim, :pretty => true, :layout => true
+
+  if development?
+    use Rack::Lineprof, profile: "app\.rb|.*\.slim$"
+  end
 
   helpers do
     def connection
