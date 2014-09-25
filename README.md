@@ -11,5 +11,5 @@ Before applying this repository, launch EC2 instance with it.
 
 ```bash
 $ gem install itamae --pre
-$ itamae ssh -h ec2-***.amazonaws.com -p 22 -u isu-user -i ~/.ssh/id_rsa.github itamae.rb
+$ itamae ssh -h ec2-***.amazonaws.com -u isu-user -i ~/.ssh/id_rsa.isucon itamae.rb
 ```
