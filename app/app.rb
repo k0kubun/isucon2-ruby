@@ -200,6 +200,14 @@ class Isucon2App < Sinatra::Base
       key = "render_ticket_#{ticketid}"
 
       fragment_store.cache(key) do
+        slim :ticket, locals: ticket_locals(ticketid)
+      end
+    end
+
+    def ticket_locals(ticketid)
+      key = "ticket_locals_#{ticketid}"
+
+      fragment_store.cache(key) do
         mysql = connection
         ticket = mysql.query(
           "SELECT t.*, a.name AS artist_name FROM ticket t
@@ -220,10 +228,8 @@ class Isucon2App < Sinatra::Base
             variation["stock"][stock["seat_id"]] = stock["order_id"]
           end
         end
-        slim :ticket, locals: {
-          ticket: ticket,
-          variations: variations,
-        }
+
+        { ticket: ticket, variations: variations }
       end
     end
 
@@ -291,10 +297,9 @@ class Isucon2App < Sinatra::Base
       mysql.query('COMMIT')
 
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
-      fragment_store.purge("render_ticket_#{ticketid}")
+      fragment_store.purge("ticket_locals_#{ticketid}")
 
-      artistid = mysql.query("SELECT artist_id FROM ticket WHERE id = #{ticketid} LIMIT 1").first["artist_id"]
-      fragment_store.purge("render_artist_#{artistid}")
+      purge_all_page_cache
 
       slim :complete, locals: { seat_id: seat_id, member_id: params[:member_id] }
     else
