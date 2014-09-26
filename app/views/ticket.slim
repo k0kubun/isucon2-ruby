@@ -16,10 +16,4 @@ h3 席状況
   - stock = variation['stock']
   h4= variation['name']
   table.seats data-variationid="#{ variation['id'] }"
-    - stock.each_slice(64) do |row_stock|
-      tr
-        - row_stock.each do |key, unavailable|
-          - if unavailable
-            == %Q{<td class="unavailable" id="#{key}"></td>}
-          - else
-            == %Q{<td class="available" id="#{key}"></td>}
+    == seat_map(stock)
