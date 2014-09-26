@@ -19,4 +19,8 @@ h3 席状況
     - ("00".."63").each do |row|
       tr
          - ("00".."63").each do |col|
-           == seat_cell(stock, row, col)
+           - key = "#{row}-#{col}"
+           - if stock[key]
+             td class="unavailable" id=key
+           - else
+             td class="available" id=key

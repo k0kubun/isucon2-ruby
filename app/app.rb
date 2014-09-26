@@ -81,15 +81,6 @@ class Isucon2App < Sinatra::Base
          ORDER BY order_id DESC LIMIT 10',
       )
     end
-
-    def seat_cell(stock, row, col)
-      key = "#{row}-#{col}"
-      if stock[key]
-        %Q{<td class="unavailable" id="#{key}"></td>}
-      else
-        %Q{<td class="available" id="#{key}"></td>}
-      end
-    end
   end
 
   # main
