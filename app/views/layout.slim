@@ -14,9 +14,13 @@ html
         img src="/images/isucon_title.jpg"
     div#sidebar
       - if request.path != '/buy'
+        - recent = recent_sold()
         table
           tr
             th colspan="2" 最近購入されたチケット
-          == recent_sold_fragment
+          - recent.each do |item|
+            tr
+              td.recent_variation= [item['a_name'], item['t_name'], item['v_name']].join(' ')
+              td.recent_seat_id= item['seat_id']
     div#content
       == yield

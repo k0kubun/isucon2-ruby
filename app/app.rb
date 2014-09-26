@@ -131,14 +131,6 @@ class Isucon2App < Sinatra::Base
       end
     end
 
-    def recent_sold_fragment
-      fragment_store.cache("recent_sold_fragment") do
-        recent_sold.map { |item|
-          "<tr><td class='recent_variation'>#{item['a_name']} #{item['t_name']} #{item['v_name']}</td><td class='recent_seat_id'>#{item['seat_id']}</td></tr>"
-        }.join
-      end
-    end
-
     def recent_sold
       mysql = connection
       mysql.query(
@@ -181,8 +173,6 @@ class Isucon2App < Sinatra::Base
     end
 
     def purge_all_page_cache
-      fragment_store.purge("recent_sold_fragment")
-
       (1..2).each do |artistid|
         fragment_store.purge("render_artist_#{artistid}")
       end
@@ -297,6 +287,8 @@ class Isucon2App < Sinatra::Base
        ORDER BY RAND() LIMIT 1",
     )
     if mysql.affected_rows > 0
+      update_recent_sold
+
       seat_id = mysql.query(
         "SELECT seat_id FROM stock WHERE order_id = #{ mysql.escape(order_id.to_s) } LIMIT 1",
       ).first['seat_id']
@@ -345,6 +337,7 @@ class Isucon2App < Sinatra::Base
         mysql.query(line)
       end
     end
+    update_recent_sold
     purge_all_page_cache
 
     (1..5).each do |ticketid|
