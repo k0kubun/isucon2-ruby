@@ -133,7 +133,14 @@ class Isucon2App < Sinatra::Base
 
     def recent_sold
       mysql = connection
-      mysql.query('SELECT seat_id, a_name, t_name, v_name FROM recent_sold ORDER BY order_id DESC LIMIT 10')
+      mysql.query(
+        'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, artist.name AS a_name FROM stock
+           JOIN variation ON stock.variation_id = variation.id
+           JOIN ticket ON variation.ticket_id = ticket.id
+           JOIN artist ON ticket.artist_id = artist.id
+         WHERE order_id IS NOT NULL
+         ORDER BY order_id DESC LIMIT 10',
+      )
     end
 
     def update_recent_sold
