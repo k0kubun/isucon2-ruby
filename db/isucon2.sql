@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS isucon2.stock (
   `variation_id` INT UNSIGNED NOT NULL,
   `seat_id` VARCHAR(255) NOT NULL,
   `order_id` INT UNSIGNED DEFAULT NULL,
+  `td` VARCHAR(255) NOT NULL,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `variation_seat` (`variation_id`,`seat_id`),
