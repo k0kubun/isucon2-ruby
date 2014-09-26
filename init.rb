@@ -6,11 +6,11 @@ ssh_dir = File.join(home_dir, ".ssh")
 directory ssh_dir do
   owner user_name
   group user_name
-  mode 0700
+  mode "0700"
 end
 
 file "#{ssh_dir}/authorized_keys" do
   owner user_name
   content pubkey
-  mode 0600
+  mode "0600"
 end
