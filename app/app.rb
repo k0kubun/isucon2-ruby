@@ -96,34 +96,18 @@ class Isucon2App < Sinatra::Base
       )
     end
 
-    # DO NOT USE DOUBLE QUOTE because it is used by query
-    def td_by_stock(seat_id, order_id)
-      "<td id='#{seat_id}' class='#{ order_id ? 'unavailable' : 'available' }'></td>"
-    end
-
     def seat_map(stock)
       unless defined?(@seat_map_source)
         trs = stock.each_slice(64).map do |row_stock|
-          "<tr>#{row_stock.map{ |seat_id, td| td }.join}</tr>"
+          tds = row_stock.map do |seat_id, order_id|
+            "<td id='#{seat_id}' class='#{ order_id ? 'unavailable' : 'available' }'>"
+          end
+          "<tr>#{tds.join}</tr>"
         end
         @seat_map_source = %Q{"#{trs.join}"}
       end
 
       eval(@seat_map_source)
-    end
-
-    def seat_row(stock, row)
-      @seat_row_source ||= '"' + ("00".."63").map{ |i| %Q{\#\{seat_cell(stock, row, '#{i}')\}} }.join + '"'
-      eval(@seat_row_source)
-    end
-
-    def seat_cell(stock, row, col)
-      key = "#{row}-#{col}"
-      if stock[key]
-        %Q{<td class="unavailable" id="#{key}"></td>}
-      else
-        %Q{<td class="available" id="#{key}"></td>}
-      end
     end
 
     def update_ticket_fragment(ticketid)
@@ -152,11 +136,9 @@ class Isucon2App < Sinatra::Base
              WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
           ).first["cnt"]
           variation["stock"] = {}
-          mysql.query(
-            "SELECT seat_id, td FROM stock
-             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }",
-          ).each do |stock|
-            variation["stock"][stock["seat_id"]] = stock["td"]
+          stocks = mysql.query( "SELECT seat_id, order_id FROM stock WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }").to_a
+          stocks.each do |stock|
+            variation["stock"][stock["seat_id"]] = stock["order_id"]
           end
         end
         slim :ticket, :locals => {
@@ -217,10 +199,6 @@ class Isucon2App < Sinatra::Base
       seat_id = mysql.query(
         "SELECT seat_id FROM stock WHERE order_id = #{ mysql.escape(order_id.to_s) } LIMIT 1",
       ).first['seat_id']
-      mysql.query(<<-SQL)
-        UPDATE stock SET td = "#{td_by_stock(seat_id, true)}"
-        WHERE variation_id = #{ variation_id } AND seat_id = '#{ seat_id }'
-      SQL
       mysql.query('COMMIT')
 
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
@@ -262,26 +240,6 @@ class Isucon2App < Sinatra::Base
         next unless line.strip!.length > 0
         mysql.query(line)
       end
-    end
-
-    stock_count = mysql.query("SELECT COUNT(1) AS count FROM stock").first["count"]
-    (1..stock_count).each_slice(5000) do |stock_ids|
-      stocks = mysql.query(<<-SQL)
-        SELECT id, variation_id, seat_id, order_id FROM stock WHERE id IN (#{stock_ids.join(',')})
-      SQL
-
-      values = stocks.map do |stock|
-        %Q{(#{stock['variation_id']},"#{stock['seat_id']}","#{td_by_stock(stock['seat_id'], stock['order_id'])}")}
-      end
-
-      mysql.query(<<-SQL)
-        INSERT INTO stock (variation_id, seat_id, td)
-        VALUES #{values.join(',')}
-        ON DUPLICATE KEY UPDATE
-          stock.variation_id=VALUES(variation_id),
-          stock.seat_id=VALUES(seat_id),
-          stock.td=VALUES(td)
-      SQL
     end
 
     (1..5).each do |ticketid|
