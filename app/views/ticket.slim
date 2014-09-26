@@ -18,5 +18,4 @@ h3 席状況
   table.seats data-variationid="#{ variation['id'] }"
     - ("00".."63").each do |row|
       tr
-         - ("00".."63").each do |col|
-           == seat_cell(stock, row, col)
+        == seat_row(stock, row)
