@@ -57,7 +57,7 @@ end
 
 class Isucon2App < Sinatra::Base
   $stdout.sync = true
-  set :slim, :pretty => true, :layout => true
+  set :slim, pretty: true, layout: true
 
   if development?
     use Rack::Lineprof, profile: "app\.rb|.*\.slim$"
@@ -75,12 +75,12 @@ class Isucon2App < Sinatra::Base
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
       Mysql2::Client.new(
-        :host => config['host'],
-        :port => config['port'],
-        :username => config['username'],
-        :password => config['password'],
-        :database => config['dbname'],
-        :reconnect => true,
+        host: config['host'],
+        port: config['port'],
+        username: config['username'],
+        password: config['password'],
+        database: config['dbname'],
+        reconnect: true,
       )
     end
 
@@ -140,9 +140,9 @@ class Isucon2App < Sinatra::Base
             variation["stock"][stock["seat_id"]] = stock["order_id"]
           end
         end
-        slim :ticket, :locals => {
-          :ticket     => ticket,
-          :variations => variations,
+        slim :ticket, locals: {
+          ticket: ticket,
+          variations: variations,
         }
       end
     end
@@ -153,8 +153,8 @@ class Isucon2App < Sinatra::Base
   get '/' do
     mysql = connection
     artists = mysql.query("SELECT * FROM artist ORDER BY id")
-    slim :index, :locals => {
-      :artists => artists,
+    slim :index, locals: {
+      artists: artists,
     }
   end
 
@@ -173,9 +173,9 @@ class Isucon2App < Sinatra::Base
          WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
       ).first["cnt"]
     end
-    slim :artist, :locals => {
-      :artist  => artist,
-      :tickets => tickets,
+    slim :artist, locals: {
+      artist: artist,
+      tickets: tickets,
     }
   end
 
@@ -203,7 +203,7 @@ class Isucon2App < Sinatra::Base
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
       update_ticket_fragment(ticketid)
 
-      slim :complete, :locals => { :seat_id => seat_id, :member_id => params[:member_id] }
+      slim :complete, locals: { seat_id: seat_id, member_id: params[:member_id] }
     else
       mysql.query('ROLLBACK')
       slim :soldout
