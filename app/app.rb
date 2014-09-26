@@ -180,6 +180,8 @@ class Isucon2App < Sinatra::Base
       (1..5).each do |ticketid|
         fragment_store.purge("render_ticket_#{ticketid}")
       end
+
+      fragment_store.purge("/")
     end
 
     def seat_map(stock)
@@ -260,11 +262,13 @@ class Isucon2App < Sinatra::Base
   # main
 
   get '/' do
-    mysql = connection
-    artists = mysql.query("SELECT * FROM artist ORDER BY id")
-    slim :index, locals: {
-      artists: artists,
-    }
+    fragment_store.cache("/") do
+      mysql = connection
+      artists = mysql.query("SELECT * FROM artist ORDER BY id")
+      slim :index, locals: {
+        artists: artists,
+      }
+    end
   end
 
   get '/artist/:artistid' do
