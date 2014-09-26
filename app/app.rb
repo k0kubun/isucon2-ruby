@@ -95,12 +95,6 @@ class Isucon2App < Sinatra::Base
       end
     end
 
-    def variations
-      @variations ||= fragment_store.cache("table_cache", "variations") do
-        mysql.query("SELECT * FROM variation").to_a
-      end
-    end
-
     def artists
       @artists ||= fragment_store.cache("table_cache", "artists") do
         mysql.query("SELECT * FROM artist").to_a
@@ -150,8 +144,10 @@ class Isucon2App < Sinatra::Base
   get '/ticket/:ticketid' do
     mysql = connection
     ticket = tickets.find{ |t| t['id'] == params['ticketid'].to_i }
-    ticket_variations = variations.select{ |v| v['ticket_id'] == ticket['id'] }
-    ticket_variations.each do |variation|
+    variations = mysql.query(
+      "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
+    )
+    variations.each do |variation|
       variation["count"] = mysql.query(
         "SELECT COUNT(*) AS cnt FROM stock
          WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
@@ -166,7 +162,7 @@ class Isucon2App < Sinatra::Base
     end
     slim :ticket, :locals => {
       :ticket     => ticket,
-      :variations => ticket_variations,
+      :variations => variations,
     }
   end
 
