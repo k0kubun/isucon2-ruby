@@ -7,6 +7,7 @@ gem 'unicorn', '4.4.0'
 gem "newrelic_rpm"
 gem "rack-lineprof", github: "kainosnoema/rack-lineprof"
 gem "pry"
+gem "sinatra-contrib"
 
 group :development do
   # run "bundle exec shotgun" on development

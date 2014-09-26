@@ -13,6 +13,8 @@ require 'mysql2'
 
 if development?
   require "rack-lineprof"
+  require "pry"
+  require "sinatra/reloader"
 end
 
 class Isucon2App < Sinatra::Base
@@ -21,6 +23,10 @@ class Isucon2App < Sinatra::Base
 
   if development?
     use Rack::Lineprof, profile: "app\.rb|.*\.slim$"
+  end
+
+  configure do
+    register Sinatra::Reloader unless production?
   end
 
   helpers do
