@@ -84,10 +84,13 @@ class Isucon2App < Sinatra::Base
 
     def seat_map(stock)
       unless defined?(@seat_map_source)
-        trs = ("00".."63").map { |row|
-          seat_row = ("00".."63").map{ |col| %Q{\#\{seat_cell(stock, '#{row}', '#{col}')\}} }.join
-          "<tr>#{seat_row}</tr>"
-        }
+        trs = []
+        ("00".."63").map do |row|
+          tds = ("00".."63").map do |col|
+            %Q{\#\{seat_cell(stock, '#{row}', '#{col}')\}}
+          end
+          trs << "<tr>#{tds.join}</tr>"
+        end
         @seat_map_source = %Q{"#{trs.join}"}
       end
 
