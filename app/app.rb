@@ -140,6 +140,31 @@ class Isucon2App < Sinatra::Base
         }
       end
     end
+
+    def render_artist(artistid)
+      key = "render_artist_#{artistid}"
+
+      fragment_store.cache(key) do
+        mysql = connection
+        artist  = mysql.query(
+          "SELECT id, name FROM artist WHERE id = #{ mysql.escape(params[:artistid]) } LIMIT 1",
+        ).first
+        tickets = mysql.query(
+          "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
+        )
+        tickets.each do |ticket|
+          ticket["count"] = mysql.query(
+            "SELECT COUNT(*) AS cnt FROM variation
+             INNER JOIN stock ON stock.variation_id = variation.id
+             WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
+          ).first["cnt"]
+        end
+        slim :artist, locals: {
+          artist: artist,
+          tickets: tickets,
+        }
+      end
+    end
   end
 
   # main
@@ -153,24 +178,7 @@ class Isucon2App < Sinatra::Base
   end
 
   get '/artist/:artistid' do
-    mysql = connection
-    artist  = mysql.query(
-      "SELECT id, name FROM artist WHERE id = #{ mysql.escape(params[:artistid]) } LIMIT 1",
-    ).first
-    tickets = mysql.query(
-      "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
-    )
-    tickets.each do |ticket|
-      ticket["count"] = mysql.query(
-        "SELECT COUNT(*) AS cnt FROM variation
-         INNER JOIN stock ON stock.variation_id = variation.id
-         WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
-      ).first["cnt"]
-    end
-    slim :artist, locals: {
-      artist: artist,
-      tickets: tickets,
-    }
+    render_artist(params[:artistid])
   end
 
   get '/ticket/:ticketid' do
@@ -196,6 +204,9 @@ class Isucon2App < Sinatra::Base
 
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
       fragment_store.purge("render_ticket_#{ticketid}")
+
+      artistid = mysql.query("SELECT artist_id FROM ticket WHERE id = #{ticketid} LIMIT 1").first["artist_id"]
+      fragment_store.purge("render_artist_#{artistid}")
 
       slim :complete, locals: { seat_id: seat_id, member_id: params[:member_id] }
     else
