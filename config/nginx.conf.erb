@@ -54,9 +54,9 @@ http {
       proxy_redirect off;
     }
 
-    location / {
-      proxy_set_header Host $host;
-      proxy_pass http://sinatra-unicorn;
-    }
+    #location / {
+    #  proxy_set_header Host $host;
+    #  proxy_pass http://sinatra-unicorn;
+    #}
   }
 }
