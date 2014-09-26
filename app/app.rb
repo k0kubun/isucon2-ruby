@@ -143,25 +143,21 @@ class Isucon2App < Sinatra::Base
            INNER JOIN artist a ON t.artist_id = a.id
            WHERE t.id = #{ ticketid } LIMIT 1",
         ).first
-        variations = mysql.query(
-          "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
-        )
+
+        variations = mysql.query("SELECT id, name FROM variation WHERE ticket_id = #{ ticket['id'] } ORDER BY id").to_a
         variations.each do |variation|
-          variation["count"] = mysql.query(
-            "SELECT COUNT(*) AS cnt FROM stock
-             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
-          ).first["cnt"]
+          variation["count"] = mysql.query("SELECT COUNT(*) AS cnt FROM stock WHERE variation_id = #{ variation['id'] } AND order_id IS NULL").first["cnt"]
           variation["stock"] = {}
-          mysql.query(
-            "SELECT seat_id, td FROM stock
-             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }",
-          ).each do |stock|
+
+          stocks = mysql.query("SELECT seat_id, td FROM stock WHERE variation_id = #{ variation['id'] }").to_a
+          stocks.each do |stock|
             variation["stock"][stock["seat_id"]] = stock["td"]
           end
         end
-        slim :ticket, :locals => {
-          :ticket     => ticket,
-          :variations => variations,
+
+        slim :ticket, locals: {
+          ticket: ticket,
+          variations: variations,
         }
       end
     end
@@ -285,7 +281,7 @@ class Isucon2App < Sinatra::Base
     end
 
     (1..5).each do |ticketid|
-      fragment_store.purge("render_ticket_#{ticketid}")
+      update_ticket_fragment(ticketid)
     end
 
     redirect '/admin', 302
