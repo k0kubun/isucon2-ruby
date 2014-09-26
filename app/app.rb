@@ -114,7 +114,6 @@ class Isucon2App < Sinatra::Base
       key = "render_ticket_#{ticketid}"
 
       fragment_store.purge(key)
-      render_ticket(ticketid)
     end
 
     def render_ticket(ticketid)
