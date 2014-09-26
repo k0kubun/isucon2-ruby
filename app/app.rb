@@ -90,6 +90,25 @@ class Isucon2App < Sinatra::Base
         %Q{<td class="available" id="#{key}"></td>}
       end
     end
+
+    def variations
+      @variations ||= fragment_store.cache("table_cache", "variations") do
+        mysql.query("SELECT * FROM variation").to_a
+      end
+    end
+
+    def artists
+      @artists ||= fragment_store.cache("table_cache", "artists") do
+        mysql.query("SELECT * FROM artist").to_a
+      end
+    end
+
+    def tickets
+      @tickets ||= fragment_store.cache("table_cache", "tickets") do
+        mysql.query("SELECT * FROM ticket").to_a
+      end
+    end
+  end
   end
 
   # main
