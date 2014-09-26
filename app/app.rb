@@ -146,7 +146,7 @@ class Isucon2App < Sinatra::Base
     def update_recent_sold
       mysql = connection
 
-      recent_sold = mysql.query('SELECT order_id, seat_id, variation_id FROM stock WHERE order_id IS NOT NULL ORDER BY order_id DESC LIMIT 10').to_a
+      recent_sold = mysql.query('SELECT order_id, seat_id, variation_id FROM stock, (SELECT id FROM stock WHERE order_id IS NOT NULL ORDER BY order_id DESC LIMIT 10) AS t WHERE t.id = stock.id').to_a
       return [] if recent_sold.size == 0
 
       recent_sold.each do |stock|
