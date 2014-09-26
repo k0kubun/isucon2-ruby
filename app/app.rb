@@ -150,6 +150,7 @@ class Isucon2App < Sinatra::Base
           variation["stock"] = {}
 
           stocks = mysql.query("SELECT seat_id, td FROM stock WHERE variation_id = #{ variation['id'] }").to_a
+          #stocks = mysql.query("SELECT stock.seat_id, stock.td FROM stock, (SELECT id FROM stock WHERE variation_id = #{variation['id']}) AS t WHERE t.id = stock.id").to_a
           stocks.each do |stock|
             variation["stock"][stock["seat_id"]] = stock["td"]
           end

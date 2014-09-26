@@ -35,8 +35,7 @@ CREATE TABLE IF NOT EXISTS isucon2.stock (
   `td` VARCHAR(255) DEFAULT NULL,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `variation_seat` (`variation_id`,`seat_id`),
-  KEY `idx` (`order_id`,`seat_id`,`variation_id`)
+  UNIQUE KEY `variation_seat` (`variation_id`,`seat_id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS isucon2.order_request (
