@@ -46,7 +46,7 @@ http {
     client_max_body_size 4G;
     error_log /tmp/nginx.isucon2.error.log;
 
-    location ~ (/ticket/) {
+    location ~ (/ticket|artist/) {
       proxy_set_header X-Real-IP  $remote_addr;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header Host localhost;
@@ -54,9 +54,9 @@ http {
       proxy_redirect off;
     }
 
-    #location / {
-    #  proxy_set_header Host $host;
-    #  proxy_pass http://sinatra-unicorn;
-    #}
+    location / {
+      proxy_set_header Host $host;
+      proxy_pass http://sinatra-unicorn;
+    }
   }
 }
