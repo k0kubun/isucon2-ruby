@@ -13,4 +13,9 @@ execute "supervisorctl restart isucon_ruby" do
   action :nothing
 end
 
+# for sinatra-contrib build
+package "gcc-c++" do
+  action :install
+end
+
 execute "cd /home/isu-user/isucon2-ruby/app; /home/isu-user/isucon2-ruby/config/env.sh bundle install"
