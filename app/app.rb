@@ -109,7 +109,6 @@ class Isucon2App < Sinatra::Base
       end
     end
   end
-  end
 
   # main
 
