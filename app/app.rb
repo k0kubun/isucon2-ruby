@@ -110,12 +110,6 @@ class Isucon2App < Sinatra::Base
       eval(@seat_map_source)
     end
 
-    def update_ticket_fragment(ticketid)
-      key = "render_ticket_#{ticketid}"
-
-      fragment_store.purge(key)
-    end
-
     def render_ticket(ticketid)
       key = "render_ticket_#{ticketid}"
 
@@ -201,7 +195,7 @@ class Isucon2App < Sinatra::Base
       mysql.query('COMMIT')
 
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
-      update_ticket_fragment(ticketid)
+      fragment_store.purge("render_ticket_#{ticketid}")
 
       slim :complete, locals: { seat_id: seat_id, member_id: params[:member_id] }
     else
