@@ -11,6 +11,14 @@ service "varnish" do
   action [:enable, :start]
 end
 
+service "varnishlog" do
+  action [:disable, :start]
+end
+
+service "varnishncsa" do
+  action [:disable, :start]
+end
+
 execute "service varnish restart" do
   action :nothing
 end
