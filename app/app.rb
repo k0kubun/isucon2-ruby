@@ -11,6 +11,7 @@ require 'slim'
 require 'json'
 require 'mysql2'
 require "singleton"
+require "redis"
 
 if development?
   require "rack-lineprof"
@@ -21,23 +22,24 @@ end
 class FragmentStore
   include Singleton
 
-  def cache(cache_name, key, &block)
-    cached = store[cache_name][key]
+  def cache(key, &block)
+    cached = redis.get(key)
     if cached
-      cached
+      Marshal.load(cached)
     else
-      update_fragment(cache_name, key, block.call)
+      update_fragment(key, block.call)
     end
   end
 
-  def update_fragment(cache_name, key, value)
-    store[cache_name][key] = value
+  def update_fragment(key, value)
+    redis.set(key, Marshal.dump(value))
+    value
   end
 
   private
 
-  def store
-    @@store ||= Hash.new { |h, k| h[k] = {} }
+  def redis
+    @redis ||= Redis.new
   end
 end
 

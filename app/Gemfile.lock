@@ -31,6 +31,7 @@ GEM
     raindrops (0.10.0)
     rblineprof (0.3.6)
       debugger-ruby_core_source (~> 1.3)
+    redis (3.0.6)
     shotgun (0.9)
       rack (>= 1.0)
     sinatra (1.3.3)
@@ -67,6 +68,7 @@ DEPENDENCIES
   newrelic_rpm
   pry
   rack-lineprof!
+  redis
   shotgun
   sinatra (= 1.3.3)
   sinatra-contrib
