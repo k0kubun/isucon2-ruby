@@ -84,6 +84,53 @@ class Isucon2App < Sinatra::Base
       )
     end
 
+    def dict(arg)
+      if defined?(@dict)
+        @dict[arg.to_i - 1]
+      else
+        @dict = []
+        10.times do |idx|
+          variation = [
+            {id: 1, name: 'アリーナ席'},
+            {id: 2, name: 'スタンド席'},
+            {id: 3, name: 'アリーナ席'},
+            {id: 4, name: 'スタンド席'},
+            {id: 5, name: 'アリーナ席'},
+            {id: 6, name: 'スタンド席'},
+            {id: 7, name: 'アリーナ席'},
+            {id: 8, name: 'スタンド席'},
+            {id: 9, name: 'アリーナ席'},
+            {id: 10, name: 'スタンド席'},
+          ][idx]
+          if variation[:id] < 3
+            ticket = {id: 1, name: '西武ドームライブ'}
+          elsif variation[:id] < 5
+            ticket = {id: 2, name: '東京ドームライブ'}
+          elsif variation[:id] < 7
+            ticket = {id: 3, name: 'さいたまスーパーアリーナライブ'}
+          elsif variation[:id] < 9
+            ticket = {id: 4, name: '横浜アリーナライブ'}
+          elsif variation[:id] < 11
+            ticket = {id: 5, name: '西武ドームライブ'}
+          end
+
+          if ticket[:id] < 3
+            artist = {id: 1, name: 'NHN48'}
+          else
+            artist = {id: 2, name: 'はだいろクローバーZ'}
+          end
+
+          @dict << {
+            v_name: variation[:name],
+            t_name: ticket[:name],
+            a_name: artist[:name],
+          }
+        end
+
+        return @dict[arg.to_i - 1]
+      end
+    end
+
     def recent_sold
       mysql = connection
       mysql.query(
@@ -94,6 +141,45 @@ class Isucon2App < Sinatra::Base
          WHERE order_id IS NOT NULL
          ORDER BY order_id DESC LIMIT 10',
       )
+    end
+
+    def update_recent_sold
+      mysql = connection
+
+      recent_sold = mysql.query('SELECT order_id, seat_id, variation_id FROM stock WHERE order_id IS NOT NULL ORDER BY order_id DESC LIMIT 10').to_a
+      return [] if recent_sold.size == 0
+
+      recent_sold.each do |stock|
+        dict(stock['variation_id']).each do |key, value|
+          stock[key] = value
+        end
+      end
+
+      values = recent_sold.map { |data|
+        %Q{('#{data["seat_id"]}',#{data["order_id"] ? data["order_id"] : "NULL" },'#{data[:a_name]}','#{data[:t_name]}','#{data[:v_name]}')}
+      }.join(",")
+      mysql.query(<<-SQL)
+        INSERT INTO recent_sold (seat_id, order_id, a_name, t_name, v_name)
+        VALUES #{values}
+        ON DUPLICATE KEY UPDATE
+          recent_sold.seat_id=VALUES(seat_id),
+          recent_sold.order_id=VALUES(order_id),
+          recent_sold.a_name=VALUES(a_name),
+          recent_sold.t_name=VALUES(t_name),
+          recent_sold.v_name=VALUES(v_name)
+      SQL
+
+      recent_sold
+    end
+
+    def purge_all_page_cache
+      (1..2).each do |artistid|
+        fragment_store.purge("render_artist_#{artistid}")
+      end
+
+      (1..5).each do |ticketid|
+        fragment_store.purge("render_ticket_#{ticketid}")
+      end
     end
 
     def seat_map(stock)
@@ -197,6 +283,8 @@ class Isucon2App < Sinatra::Base
        ORDER BY RAND() LIMIT 1",
     )
     if mysql.affected_rows > 0
+      update_recent_sold
+
       seat_id = mysql.query(
         "SELECT seat_id FROM stock WHERE order_id = #{ mysql.escape(order_id.to_s) } LIMIT 1",
       ).first['seat_id']
@@ -239,12 +327,15 @@ class Isucon2App < Sinatra::Base
 
   post '/admin' do
     mysql = connection
+    mysql.query('delete from recent_sold')
     open(File.dirname(__FILE__) + '/../db/initial_data.sql') do |file|
       file.each do |line|
         next unless line.strip!.length > 0
         mysql.query(line)
       end
     end
+    update_recent_sold
+    purge_all_page_cache
 
     (1..5).each do |ticketid|
       fragment_store.purge("render_ticket_#{ticketid}")
