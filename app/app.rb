@@ -70,6 +70,10 @@ class Isucon2App < Sinatra::Base
       )
     end
 
+    def mysql
+      @mysql ||= connection
+    end
+
     def recent_sold
       mysql = connection
       mysql.query(
@@ -90,6 +94,22 @@ class Isucon2App < Sinatra::Base
         %Q{<td class="available" id="#{key}"></td>}
       end
     end
+
+    def artists
+      @artists ||= fragment_store.cache("table_cache", "artists") do
+        mysql.query("SELECT * FROM artist").to_a
+      end
+    end
+
+    def tickets
+      @tickets ||= fragment_store.cache("table_cache", "tickets") do
+        tickets = mysql.query("SELECT * FROM ticket").to_a
+        tickets.each do |ticket|
+          artist = artists.find{ |a| a['id'] == ticket['artist_id'] }
+          ticket["artist_name"] = artist["name"]
+        end
+      end
+    end
   end
 
   # main
@@ -107,10 +127,8 @@ class Isucon2App < Sinatra::Base
     artist  = mysql.query(
       "SELECT id, name FROM artist WHERE id = #{ mysql.escape(params[:artistid]) } LIMIT 1",
     ).first
-    tickets = mysql.query(
-      "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
-    )
-    tickets.each do |ticket|
+    artist_tickets = tickets.select{ |t| t['artist_id'] == artist['id'] }
+    artist_tickets.each do |ticket|
       ticket["count"] = mysql.query(
         "SELECT COUNT(*) AS cnt FROM variation
          INNER JOIN stock ON stock.variation_id = variation.id
@@ -119,17 +137,13 @@ class Isucon2App < Sinatra::Base
     end
     slim :artist, :locals => {
       :artist  => artist,
-      :tickets => tickets,
+      :tickets => artist_tickets,
     }
   end
 
   get '/ticket/:ticketid' do
     mysql = connection
-    ticket = mysql.query(
-      "SELECT t.*, a.name AS artist_name FROM ticket t
-       INNER JOIN artist a ON t.artist_id = a.id
-       WHERE t.id = #{ mysql.escape(params[:ticketid]) } LIMIT 1",
-    ).first
+    ticket = tickets.find{ |t| t['id'] == params['ticketid'].to_i }
     variations = mysql.query(
       "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
     )
