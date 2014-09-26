@@ -1,4 +1,4 @@
-worker_processes 50
+worker_processes 4
 preload_app true
 
 stderr_path 'log/unicorn.log'
