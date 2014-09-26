@@ -82,11 +82,16 @@ class Isucon2App < Sinatra::Base
       )
     end
 
+    # DO NOT USE DOUBLE QUOTE because it is used by query
+    def td_by_stock(seat_id, order_id)
+      "<td id='#{seat_id}' class='#{ order_id ? 'unavailable' : 'available' }'></td>"
+    end
+
     def seat_map(stock)
       unless defined?(@seat_map_source)
         trs = stock.each_slice(64).map do |row_stock|
-          tds = row_stock.map do |key, unavailable|
-            "<td id='#{key}' class='#{ unavailable ? 'unavailable' : 'available' }'></td>"
+          tds = row_stock.map do |seat_id, order_id|
+            td_by_stock(seat_id, order_id)
           end
           "<tr>#{tds.join}</tr>"
         end
@@ -240,6 +245,26 @@ class Isucon2App < Sinatra::Base
         next unless line.strip!.length > 0
         mysql.query(line)
       end
+    end
+
+    stock_count = mysql.query("SELECT COUNT(1) AS count FROM stock").first["count"]
+    (1..stock_count).each_slice(5000) do |stock_ids|
+      stocks = mysql.query(<<-SQL)
+        SELECT id, variation_id, seat_id, order_id FROM stock WHERE id IN (#{stock_ids.join(',')})
+      SQL
+
+      values = stocks.map do |stock|
+        %Q{(#{stock['variation_id']},"#{stock['seat_id']}","#{td_by_stock(stock['seat_id'], stock['order_id'])}")}
+      end
+
+      mysql.query(<<-SQL)
+        INSERT INTO stock (variation_id, seat_id, td)
+        VALUES #{values.join(',')}
+        ON DUPLICATE KEY UPDATE
+          stock.variation_id=VALUES(variation_id),
+          stock.seat_id=VALUES(seat_id),
+          stock.td=VALUES(td)
+      SQL
     end
     redirect '/admin', 302
   end
