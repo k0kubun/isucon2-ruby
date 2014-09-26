@@ -90,10 +90,7 @@ class Isucon2App < Sinatra::Base
     def seat_map(stock)
       unless defined?(@seat_map_source)
         trs = stock.each_slice(64).map do |row_stock|
-          tds = row_stock.map do |seat_id, order_id|
-            td_by_stock(seat_id, order_id)
-          end
-          "<tr>#{tds.join}</tr>"
+          "<tr>#{row_stock.map{ |seat_id, td| td }.join}</tr>"
         end
         @seat_map_source = %Q{"#{trs.join}"}
       end
@@ -185,7 +182,7 @@ class Isucon2App < Sinatra::Base
         "SELECT seat_id, order_id FROM stock
          WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }",
       ).each do |stock|
-        variation["stock"][stock["seat_id"]] = stock["order_id"]
+        variation["stock"][stock["seat_id"]] = stock["td"]
       end
     end
     slim :ticket, :locals => {
@@ -199,15 +196,20 @@ class Isucon2App < Sinatra::Base
     mysql.query('BEGIN')
     mysql.query("INSERT INTO order_request (member_id) VALUES ('#{ mysql.escape(params[:member_id]) }')")
     order_id = mysql.last_id
+    variation_id = params[:variation_id]
     mysql.query(
       "UPDATE stock SET order_id = #{ mysql.escape(order_id.to_s) }
-       WHERE variation_id = #{ mysql.escape(params[:variation_id]) } AND order_id IS NULL
+       WHERE variation_id = #{ variation_id } AND order_id IS NULL
        ORDER BY RAND() LIMIT 1",
     )
     if mysql.affected_rows > 0
       seat_id = mysql.query(
         "SELECT seat_id FROM stock WHERE order_id = #{ mysql.escape(order_id.to_s) } LIMIT 1",
       ).first['seat_id']
+      mysql.query(<<-SQL)
+        UPDATE stock SET td = "#{td_by_stock(seat_id, true)}"
+        WHERE variation_id = #{ variation_id } AND seat_id = '#{ seat_id }'
+      SQL
       mysql.query('COMMIT')
       slim :complete, :locals => { :seat_id => seat_id, :member_id => params[:member_id] }
     else
