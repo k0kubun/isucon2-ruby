@@ -27,13 +27,25 @@ class FragmentStore
     if cached
       Marshal.load(cached)
     else
-      update_fragment(key, block.call)
+      update(key, block.call)
     end
   end
 
-  def update_fragment(key, value)
+  def update(key, value)
     redis.set(key, Marshal.dump(value))
     value
+  end
+
+  def purge(key)
+    redis.del(key)
+  end
+
+  def increment(key)
+    redis.incr(key)
+  end
+
+  def decrement(key)
+    redis.decr(key)
   end
 
   private
@@ -114,21 +126,43 @@ class Isucon2App < Sinatra::Base
       end
     end
 
-    def variations
-      @variations ||= fragment_store.cache("table_cache", "variations") do
-        mysql.query("SELECT * FROM variation").to_a
-      end
+    def update_ticket_fragment(ticketid)
+      key = "render_ticket_#{ticketid}"
+
+      fragment_store.purge(key)
+      render_ticket(ticketid)
     end
 
-    def artists
-      @artists ||= fragment_store.cache("table_cache", "artists") do
-        mysql.query("SELECT * FROM artist").to_a
-      end
-    end
+    def render_ticket(ticketid)
+      key = "render_ticket_#{ticketid}"
 
-    def tickets
-      @tickets ||= fragment_store.cache("table_cache", "tickets") do
-        mysql.query("SELECT * FROM ticket").to_a
+      fragment_store.cache(key) do
+        mysql = connection
+        ticket = mysql.query(
+          "SELECT t.*, a.name AS artist_name FROM ticket t
+           INNER JOIN artist a ON t.artist_id = a.id
+           WHERE t.id = #{ ticketid } LIMIT 1",
+        ).first
+        variations = mysql.query(
+          "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
+        )
+        variations.each do |variation|
+          variation["count"] = mysql.query(
+            "SELECT COUNT(*) AS cnt FROM stock
+             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
+          ).first["cnt"]
+          variation["stock"] = {}
+          mysql.query(
+            "SELECT seat_id, td FROM stock
+             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }",
+          ).each do |stock|
+            variation["stock"][stock["seat_id"]] = stock["td"]
+          end
+        end
+        slim :ticket, :locals => {
+          :ticket     => ticket,
+          :variations => variations,
+        }
       end
     end
   end
@@ -165,32 +199,7 @@ class Isucon2App < Sinatra::Base
   end
 
   get '/ticket/:ticketid' do
-    mysql = connection
-    ticket = mysql.query(
-      "SELECT t.*, a.name AS artist_name FROM ticket t
-       INNER JOIN artist a ON t.artist_id = a.id
-       WHERE t.id = #{ mysql.escape(params[:ticketid]) } LIMIT 1",
-    ).first
-    variations = mysql.query(
-      "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
-    )
-    variations.each do |variation|
-      variation["count"] = mysql.query(
-        "SELECT COUNT(*) AS cnt FROM stock
-         WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
-      ).first["cnt"]
-      variation["stock"] = {}
-      mysql.query(
-        "SELECT seat_id, td FROM stock
-         WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }",
-      ).each do |stock|
-        variation["stock"][stock["seat_id"]] = stock["td"]
-      end
-    end
-    slim :ticket, :locals => {
-      :ticket     => ticket,
-      :variations => variations,
-    }
+    render_ticket(params[:ticketid])
   end
 
   post '/buy' do
@@ -213,6 +222,10 @@ class Isucon2App < Sinatra::Base
         WHERE variation_id = #{ variation_id } AND seat_id = '#{ seat_id }'
       SQL
       mysql.query('COMMIT')
+
+      ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
+      update_ticket_fragment(ticketid)
+
       slim :complete, :locals => { :seat_id => seat_id, :member_id => params[:member_id] }
     else
       mysql.query('ROLLBACK')
@@ -270,6 +283,11 @@ class Isucon2App < Sinatra::Base
           stock.td=VALUES(td)
       SQL
     end
+
+    (1..5).each do |ticketid|
+      fragment_store.purge("render_ticket_#{ticketid}")
+    end
+
     redirect '/admin', 302
   end
 
