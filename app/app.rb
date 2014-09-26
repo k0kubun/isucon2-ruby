@@ -10,11 +10,35 @@ require 'sinatra/base'
 require 'slim'
 require 'json'
 require 'mysql2'
+require "singleton"
 
 if development?
   require "rack-lineprof"
   require "pry"
   require "sinatra/reloader"
+end
+
+class FragmentStore
+  include Singleton
+
+  def cache(cache_name, key, &block)
+    cached = store[cache_name][key]
+    if cached
+      cached
+    else
+      update_fragment(cache_name, key, block.call)
+    end
+  end
+
+  def update_fragment(cache_name, key, value)
+    store[cache_name][key] = value
+  end
+
+  private
+
+  def store
+    @@store ||= Hash.new { |h, k| h[k] = {} }
+  end
 end
 
 class Isucon2App < Sinatra::Base
@@ -30,6 +54,10 @@ class Isucon2App < Sinatra::Base
   end
 
   helpers do
+    def fragment_store
+      @fragment_store ||= FragmentStore.instance
+    end
+
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
       Mysql2::Client.new(
