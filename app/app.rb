@@ -85,9 +85,9 @@ class Isucon2App < Sinatra::Base
     def seat_map(stock)
       unless defined?(@seat_map_source)
         trs = []
-        ("00".."63").map do |row|
-          tds = ("00".."63").map do |col|
-            %Q{\#\{seat_cell(stock, '#{row}', '#{col}')\}}
+        stock.each_slice(64) do |row_stock|
+          tds = row_stock.map do |key, unavailable|
+            "<td id='#{key}' class='#{ unavailable ? 'unavailable' : 'available' }'></td>"
           end
           trs << "<tr>#{tds.join}</tr>"
         end
