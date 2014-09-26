@@ -57,7 +57,7 @@ end
 
 class Isucon2App < Sinatra::Base
   $stdout.sync = true
-  set :slim, pretty: true, layout: true
+  set :slim, :pretty => true, :layout => true
 
   if development?
     use Rack::Lineprof, profile: "app\.rb|.*\.slim$"
@@ -75,12 +75,12 @@ class Isucon2App < Sinatra::Base
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
       Mysql2::Client.new(
-        host: config['host'],
-        port: config['port'],
-        username: config['username'],
-        password: config['password'],
-        database: config['dbname'],
-        reconnect: true,
+        :host => config['host'],
+        :port => config['port'],
+        :username => config['username'],
+        :password => config['password'],
+        :database => config['dbname'],
+        :reconnect => true,
       )
     end
 
@@ -109,6 +109,43 @@ class Isucon2App < Sinatra::Base
 
       eval(@seat_map_source)
     end
+
+    def update_ticket_fragment(ticketid)
+      key = "render_ticket_#{ticketid}"
+
+      fragment_store.purge(key)
+    end
+
+    def render_ticket(ticketid)
+      key = "render_ticket_#{ticketid}"
+
+      fragment_store.cache(key) do
+        mysql = connection
+        ticket = mysql.query(
+          "SELECT t.*, a.name AS artist_name FROM ticket t
+           INNER JOIN artist a ON t.artist_id = a.id
+           WHERE t.id = #{ ticketid } LIMIT 1",
+        ).first
+        variations = mysql.query(
+          "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
+        )
+        variations.each do |variation|
+          variation["count"] = mysql.query(
+            "SELECT COUNT(*) AS cnt FROM stock
+             WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL",
+          ).first["cnt"]
+          variation["stock"] = {}
+          stocks = mysql.query( "SELECT seat_id, order_id FROM stock WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }").to_a
+          stocks.each do |stock|
+            variation["stock"][stock["seat_id"]] = stock["order_id"]
+          end
+        end
+        slim :ticket, :locals => {
+          :ticket     => ticket,
+          :variations => variations,
+        }
+      end
+    end
   end
 
   # main
@@ -116,8 +153,8 @@ class Isucon2App < Sinatra::Base
   get '/' do
     mysql = connection
     artists = mysql.query("SELECT * FROM artist ORDER BY id")
-    slim :index, locals: {
-      artists: artists,
+    slim :index, :locals => {
+      :artists => artists,
     }
   end
 
@@ -136,38 +173,14 @@ class Isucon2App < Sinatra::Base
          WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
       ).first["cnt"]
     end
-    slim :artist, locals: {
-      artist: artist,
-      tickets: tickets,
+    slim :artist, :locals => {
+      :artist  => artist,
+      :tickets => tickets,
     }
   end
 
   get '/ticket/:ticketid' do
-    key = "render_ticket_#{params[:ticketid]}"
-
-    fragment_store.cache(key) do
-      mysql = connection
-      ticket = mysql.query(
-        "SELECT t.*, a.name AS artist_name FROM ticket t
-         INNER JOIN artist a ON t.artist_id = a.id
-         WHERE t.id = #{ ticketid } LIMIT 1",
-      ).first
-
-      variations = mysql.query("SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id")
-      variations.each do |variation|
-        variation["count"] = mysql.query( "SELECT COUNT(*) AS cnt FROM stock WHERE variation_id = #{ mysql.escape(variation['id'].to_s) } AND order_id IS NULL").first["cnt"]
-        variation["stock"] = {}
-
-        stocks = mysql.query( "SELECT seat_id, order_id FROM stock WHERE variation_id = #{ mysql.escape(variation['id'].to_s) }").to_a
-        stocks.each do |stock|
-          variation["stock"][stock["seat_id"]] = stock["order_id"]
-        end
-      end
-      slim :ticket, locals: {
-        ticket: ticket,
-        variations: variations,
-      }
-    end
+    render_ticket(params[:ticketid])
   end
 
   post '/buy' do
@@ -188,9 +201,9 @@ class Isucon2App < Sinatra::Base
       mysql.query('COMMIT')
 
       ticketid = mysql.query("SELECT ticket_id FROM variation WHERE id = #{variation_id} LIMIT 1").first["ticket_id"]
-      fragment_store.purge("render_ticket_#{ticketid}")
+      update_ticket_fragment(ticketid)
 
-      slim :complete, locals: { seat_id: seat_id, member_id: params[:member_id] }
+      slim :complete, :locals => { :seat_id => seat_id, :member_id => params[:member_id] }
     else
       mysql.query('ROLLBACK')
       slim :soldout
